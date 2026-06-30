@@ -1,0 +1,285 @@
+================================================================================
+BLUE MAX — FULL BUILD PROMPT FOR CLAUDE CODE
+WWI Biplane Shooter (Commodore 64, 1983 Synapse Software) — Python/Pygame Recreation
+================================================================================
+
+You are building a faithful Python/Pygame recreation of Blue Max (Commodore 64, 1983
+by Synapse Software). This is a WWI biplane shooter with a diagonal-scrolling
+isometric view. Study every detail below and implement the full game.
+
+────────────────────────────────────────────────────────────────────────────────
+REFERENCE — HOW THE ORIGINAL GAME WORKS
+────────────────────────────────────────────────────────────────────────────────
+
+VISUAL STYLE
+- Isometric diagonal-scrolling view (like Zaxxon). Terrain scrolls diagonally
+  from top-left to bottom-right.
+- The player's biplane is drawn in the center-ish of the screen with a shadow
+  directly below it on the ground. The shadow is used to aim bombs.
+- Color palette should feel like C64: bright flat colors, no gradients.
+  Use these approximate colors:
+    Ground/grass: dark green (#3a6b35)
+    River/water:  blue (#2040a0)
+    Roads:        grey (#888888)
+    Trees:        dark green clusters (#1a4a1a)
+    Buildings:    tan/brown (#c8a060)
+    Player plane: grey/white (#d0d0d0) with red roundel
+    Enemy planes: brown/dark (#8b4513)
+    Tanks:        olive green (#4a5a20)
+    Ships:        dark grey (#505060)
+    Bridges:      brown (#8b6914)
+    Status bar:   black with colored text
+
+STATUS BAR (bottom of screen, ~40px tall)
+  Shows: SPEED | ALTITUDE | FUEL | BOMBS | SCORE | DAMAGE INDICATORS
+  Color of the bar background changes based on altitude:
+    Normal flight:          black
+    Strafing altitude:      brown  (low, ~21-25 ft equivalent)
+    Same altitude as enemy: blue   (can shoot enemy planes)
+    Dangerously low:        yellow (flashing, crash risk)
+
+TERRAIN ZONES (the game has 3 zones, each ends with a friendly airfield)
+  Zone 1: River runs along the left side. Right side is wooded/grassy.
+           Targets: ships in river, bridges crossing river, tanks on roads, AA guns.
+  Zone 2: River fades. Land and roads with tanks, enemy airbase buildings.
+  Zone 3: Urban area — skyscrapers, bunkers. Objective: destroy 3 marked bunkers.
+  Each zone ends with a visible friendly airstrip for landing.
+
+────────────────────────────────────────────────────────────────────────────────
+GAMEPLAY MECHANICS (implement all of these)
+────────────────────────────────────────────────────────────────────────────────
+
+PLAYER PLANE
+- Sopwith Camel biplane sprite (draw with pygame.draw or simple polygon art)
+- Moves in 8 directions relative to the isometric scroll
+- Always moving forward (scroll always advances); player steers left/right/faster/slower
+- Has a shadow sprite on the ground at all times (used for bomb aiming)
+- Speed range: 0–300 mph displayed on status bar
+- Altitude levels: 0 (ground/strafing), 1 (low), 2 (medium), 3 (high/dogfight)
+
+TAKEOFF SEQUENCE
+- Game starts on the runway. Plane must accelerate.
+- Player must reach speed > 100 mph before lifting off.
+- If fire is pressed before reaching 100 mph on ground, plane explodes.
+
+CONTROLS (keyboard — map joystick directions to keys)
+  Arrow UP    = increase altitude / accelerate
+  Arrow DOWN  = decrease altitude / decelerate (or bomb release when combined)
+  Arrow LEFT  = move plane left on screen
+  Arrow RIGHT = move plane right on screen
+  SPACE       = fire machine gun (shoots forward)
+  SPACE + DOWN arrow simultaneously = drop bomb
+  ENTER       = start game / confirm menu selection
+  ESC         = pause / back to menu
+
+MACHINE GUN
+- Fires forward from the plane
+- Bullets travel diagonally forward in isometric space
+- Can only damage enemy planes that are at the SAME altitude as the player
+- When player and enemy are at same altitude, status bar turns BLUE
+- Guns can be damaged (one of 4 damage types)
+
+BOMBING
+- Press SPACE + DOWN to drop a bomb
+- Bomb falls and hits where the plane's SHADOW is on the ground
+- Visual: bomb sprite falls from plane position toward shadow position
+- Explosion animation when bomb hits target or ground
+- Bomb count displayed in status bar (limited supply, refilled at airfield)
+- Bomb gear can be damaged (prevents bomb release)
+
+ALTITUDE SYSTEM (4 levels: 0, 1, 2, 3)
+- Level 0 = strafing height (status bar = brown). Can strafe ground targets with guns.
+- Level 1 = low flight. Normal movement.
+- Level 2 = medium flight. Normal movement.
+- Level 3 = high. Same as enemy planes' patrol altitude.
+- Flying too low near terrain/obstacles = crash (status bar flashes yellow as warning)
+- Altitude change is gradual (not instant) — takes ~1 second per level
+
+TARGETS
+  PRIMARY TARGETS (flashing, worth more points):
+    - Bridges with a flashing cross marker
+    - Enemy planes that flash blue
+    - Cars/vehicles that flash blue
+    - Ships that are colored red/flashing
+
+  SECONDARY TARGETS (static, worth fewer points):
+    - Regular tanks on roads
+    - AA gun emplacements (shoot back at player)
+    - Regular buildings
+    - Regular enemy biplanes
+    - Trucks / vehicles
+
+  TARGETING RULE: Bridges and ships must be BOMBED (from altitude).
+                  Tanks and buildings can be strafed (altitude 0) OR bombed.
+                  Enemy planes must be shot with guns at same altitude.
+
+ENEMY PLANES
+- Enemy biplanes spawn ahead of the player (from top of scroll)
+- Fly toward the player or in crossing patterns
+- Attack only when player is at altitude 3 (same level)
+- Basic AI: fly toward player X position, then strafe across
+- Can be shot when status bar is BLUE (same altitude)
+- 2-3 enemy planes max on screen at once
+
+AA GUNS (anti-aircraft)
+- Fixed ground positions
+- Fire flak shots upward when player is overhead
+- Flak travels upward and slightly toward player
+- Cannot be destroyed by guns, only by bombs
+
+DAMAGE SYSTEM
+- Player plane has 5 hit points (5th hit = destroyed)
+- Each hit randomly causes one of 4 malfunctions:
+    1. GUN DAMAGE    — machine gun fires at reduced rate or stops
+    2. BOMB DAMAGE   — cannot release bombs
+    3. FUEL LEAK     — fuel drains faster than normal
+    4. MANEUVER LOSS — plane turns/moves more slowly
+- Displayed as damage indicators on the status bar
+- All damage repaired when landing at friendly airfield
+
+LANDING SEQUENCE
+- Beeping sound (or visual alert) warns that friendly airfield is approaching
+- Airfield appears as a runway strip on the terrain
+- Player must:
+    1. Reduce altitude to 0 (ground level)
+    2. Align plane over the runway (left/right)
+    3. Reduce speed below 100 mph
+- Successful landing: refuel, repair all damage, restock bombs, continue
+- Failed landing (too fast or misaligned): crash and lose a life
+
+FUEL SYSTEM
+- Fuel gauge on status bar
+- Fuel depletes over time (faster at higher speed)
+- If fuel hits 0, plane crashes
+- Refilled completely on landing
+
+SCORE & RANK SYSTEM
+  Point values (approximate):
+    Enemy plane (secondary):  100 pts
+    Enemy plane (primary):    250 pts
+    Tank (secondary):          50 pts
+    Tank (primary):           150 pts
+    Ship (secondary):         200 pts
+    Ship (primary):           500 pts
+    Bridge (secondary):       300 pts
+    Bridge (primary):         750 pts
+    Building (secondary):      50 pts
+    Bunker (primary):        1000 pts
+    AA gun:                   100 pts
+
+  Ranks (awarded at score thresholds):
+    0       — Cadet
+    1,000   — Lieutenant
+    5,000   — Captain
+    15,000  — Major
+    30,000  — Colonel
+    50,000  — General
+    100,000 — Blue Max (highest — the order Pour le Mérite)
+
+────────────────────────────────────────────────────────────────────────────────
+ARCHITECTURE — HOW TO BUILD IT
+────────────────────────────────────────────────────────────────────────────────
+
+STRUCTURE (modular files):
+  main.py              — entry point, main loop, game state machine
+  settings.py          — all constants (screen size, speeds, colors, points)
+  camera.py            — isometric camera / diagonal scroll math
+  player.py            — Player class (movement, altitude, shooting, bombing)
+  entities.py          — base Entity class; Ground targets (Tank, Ship, Bridge,
+                         Building, Bunker, AAGun), EnemyPlane
+  terrain.py           — Terrain tile generation for each zone
+  sprites.py           — All sprite drawing functions (using pygame.draw)
+  hud.py               — Status bar rendering
+  game.py              — Main Game class orchestrating states
+  states/
+    menu.py            — Main menu state (difficulty selection)
+    flying.py          — Main flight gameplay state
+    landing.py         — Landing sequence state
+    gameover.py        — Game over / score / rank display state
+
+GAME STATES:
+  MENU     → player selects difficulty (Easy / Normal / Hard)
+  FLYING   → main gameplay loop
+  LANDING  → triggered when airfield reached; mini landing sequence
+  GAMEOVER → plane destroyed or mission complete; show score + rank
+
+CAMERA / ISOMETRIC MATH:
+  The world is a grid of tiles. Each tile maps to screen space with:
+    screen_x = (world_x - world_y) * TILE_W // 2
+    screen_y = (world_x + world_y) * TILE_H // 2 - altitude_offset
+  The camera scrolls: world_y increases over time (auto-scroll forward).
+  Player can offset world_x position left/right.
+  Tile size: TILE_W=64, TILE_H=32 (classic isometric ratio 2:1).
+
+ENTITY SYSTEM:
+  Base Entity: world_x, world_y, altitude, hp, points_value, is_primary (flashing)
+  Each entity has:
+    update(dt)   — update position / AI / animation
+    draw(screen, camera)  — render to screen
+    on_hit()     — handle being hit by bullet or bomb
+
+DELTA TIME:
+  All movement uses dt (seconds since last frame) for frame-rate independence.
+  Target 60 FPS.
+
+DIFFICULTY SETTINGS (applied in settings.py):
+  Easy:   enemy spawn rate 0.3x, AA gun accuracy 0.2, fuel drain 0.5x, 7 hit points
+  Normal: enemy spawn rate 1.0x, AA gun accuracy 0.5, fuel drain 1.0x, 5 hit points
+  Hard:   enemy spawn rate 2.0x, AA gun accuracy 0.8, fuel drain 1.5x, 5 hit points
+
+────────────────────────────────────────────────────────────────────────────────
+PROJECT FILES TO CREATE
+────────────────────────────────────────────────────────────────────────────────
+
+requirements.txt:
+  pygame>=2.5.0
+
+.gitignore:
+  __pycache__/, *.pyc, .env, venv/, .DS_Store
+
+README.md:
+  Title, description, how to install (pip install -r requirements.txt),
+  how to run (python main.py), controls reference, screenshot placeholder.
+
+────────────────────────────────────────────────────────────────────────────────
+IMPLEMENTATION ORDER
+────────────────────────────────────────────────────────────────────────────────
+
+Build in this order so it is runnable at each step:
+
+1. settings.py + main.py skeleton with game loop and black screen
+2. camera.py with isometric math + terrain.py drawing a scrolling tiled ground
+3. sprites.py drawing the player plane + shadow; player.py with movement
+4. hud.py drawing the status bar with all indicators
+5. Takeoff sequence on Zone 1 runway
+6. entities.py — Tank, Ship, Bridge, Building, AAGun on the terrain
+7. Machine gun mechanic + bullets hitting enemy planes
+8. Bombing mechanic + bomb falling to shadow position + explosions
+9. Enemy plane AI (spawn, fly toward player, attack)
+10. Damage system (4 malfunction types)
+11. Fuel system
+12. Landing sequence state
+13. Zone transitions (Zone 1 → 2 → 3)
+14. Scoring and rank system
+15. Menu state with difficulty selection
+16. Game over state with score + rank display
+17. Polish: sounds (pygame.mixer beeps/tones), flashing primary targets,
+    status bar color changes, explosion animations
+
+────────────────────────────────────────────────────────────────────────────────
+CONSTRAINTS & QUALITY RULES
+────────────────────────────────────────────────────────────────────────────────
+
+- NO external assets. All graphics drawn with pygame.draw (polygons, rects,
+  circles, lines). No image files needed.
+- NO external libraries beyond pygame. Pure Python + pygame only.
+- The game must be runnable with: python main.py
+- Use delta-time (dt) for all movement — must run correctly at any frame rate.
+- Keep each file under ~300 lines. Split logic if a file grows too large.
+- Write minimal inline comments only where game logic is non-obvious.
+- Do not use placeholder stubs — implement every mechanic listed above fully.
+- After completing all files, run the game and verify it launches without errors.
+
+================================================================================
+BEGIN — create all files now, implement fully, make it runnable.
+================================================================================
